@@ -7,7 +7,6 @@ Au cours de cette documentation seront expliqués :
 *  Comment fonctionne Docker au sein d'un environnement Windows et comment **dockerd** se comporte.
 *  Les spécificités de **l'image IIS** fournie par Windows ainsi que la configuration de mise en place avec Docker.
 *  La création d'un containeur ayant le rôle de base de données.
-*  Comment configurer le docker compose afin **d'associer les deux conteneurs**, à savoir le conteneur se chargeant du server IIS et celui de contenant la base de données.
 
 
 # 1. Docker linux et Windows
@@ -85,7 +84,7 @@ Pour partager des donées persistantes, Docker a mis en place le **DVC** (Data V
 **Windows**
 Dans une installation par défaut, les niveaux sont stockés dans **C:\ProgramData\docker** et répartis dans les répertoires «image» et «windowsfilter». grâce à la configuration data-root (daemon.json), on peut changer ces emplacements.
 
-Remarque, **ReFS** n'est pas pris en charge, seul **NTFS** est pris en charge pour le stockage de niveaux.
+Remarque, **ReFS** (système de fichier propriétaire Micosoft) n'est pas pris en charge, seul **NTFS** est pris en charge pour le stockage de niveaux.
 ***
 **Windows et Linux**
 
@@ -105,7 +104,7 @@ PS C:\>Set-VMProcessor -VMName WS2016 -ComputerName Nano -  ExposeVirtualization
 puis autoriser sur notre machine hôte le **spoofing d'adresses MAC** de sorte à ce que notre machine virtuelle utilise une autre adresse MAC pour ses VM ou conteneurs.
 Cette petite incompatibilité peut être corrigée dans les **paramètres de notre VM**.
 ### 1.3.7 Liens symboliques
-**Linux et Windows**VERIIIIIIIIIDDDDDDDIIIIIIIIIIIF
+**Linux et Windows** (à vérifier)
 Les **liens symboliques** sont résolus dans le conteneur. Si l'on doit lier un chemin d’accès hôte vers un conteneur et que ce chemin est un lien symbolique ou contient des liens symboliques, le conteneur ne sera pas en mesure d’y accéder.
 ***
  
@@ -124,7 +123,7 @@ On trouvera plus d'information sur cette partie en suivant, lors de la mise en p
 
 # 3. Oracle database et Docker
 
-
+A compléter
 
 # 4. Mise en pratique
 
@@ -222,13 +221,13 @@ Jusqu'à présent, aucune base de données n'a été créée.
 
 Élément à prendre en compte dans Windows : cette correspondance de répertoire a une **syntaxe différente** de celle utilisée sous Linux et il est **uniquement autorisé à utiliser des répertoires situés sur le même disque** que celui où Docker a été installé (ici V:\).
 
-La commande suivante va lancer l'image **ora121** et on pourra utiliser les ports **1521**, **5500** et **8080** pour comuniquer avec.De plus il faut veiller à ce que la base de données utilise **au moins un même port** que notre serveur IIS pour que l'on puisse établir une communication. On défini ensuite les variables d'environnement propres à oracle et comme dit précédemment -v pour montrer le répertoire de travail dans le conteneur.
+La commande suivante va lancer l'image **ora121** et on pourra utiliser les ports **1521**, **5500** et **8080** pour comuniquer avec. De plus il faut veiller à ce que la base de données utilise **au moins un même port** que notre serveur IIS pour que l'on puisse établir une communication. On défini ensuite les variables d'environnement propres à oracle et comme dit précédemment -v pour montrer le répertoire de travail dans le conteneur.
 ```
 docker run --name ora121  -p 1521:1521 -p 5500:5500 -p 8080:80 -e ORACLE_SID=orcl -e ORACLE_PDB=pdb1 -e 
 ORACLE_PWD=Oracle_123  -e ORACLE_CHARACTERSET=AL32UTF8 -v  
 //v/users/calero/.docker/persistentdisk/ora121://opt/oracle/oradata  oracle/database:12.1.0.2-ee
 ```
-Si on rencontre des erreurs, il peut être utile de vérifier comment le mappage a été configurer dans notre conteneur grâce à la commande suivante : 
+Si on rencontre des erreurs, il peut être utile de vérifier comment le mappage a été configuré dans notre conteneur grâce à la commande suivante : 
 ```
 docker inspect oracle/database:12.1.0.2-ee
 ```
@@ -237,7 +236,7 @@ Elle va nous permettre de voir la configuration de notre conteneur, l'entrée "V
 ### 4.3.4. Connexion à la BDD
 Pour ce faire on va vérifier la configuration réseau de notre image pour pouvoir s'y connecter.
 ```
-C:\Users\calero>docker-machine ip
+V:\Users\toto>docker-machine ip
 192.168.99.100
 ```
 On va donc se connecter via la bonne ip et le bon port
@@ -268,46 +267,18 @@ SQL>
 ```
 Dès lors, on pourra passer nos requêtes SQL.
 
-## 4.4. Docker compose
 
-Docker compose est fichier Yaml qui se trouve à la racine de notre projet et que l'on va créer. Il va dire qu'on va lancer un certain nombre de conteneurs et à partir de là, on va pouvoir mettre les options pour commander un conteneur.
+## 5. Améliorations possibles
 
-```
-version: "1.0"
-services:
-  iis-demo:
-    build: .
-    image: "iis"
-    ports:
-    - "80"
-    networks:
-      nat:
-        ipv4_address: IP_Host
-    volumes:
-    - "V:/temp:c:/inetpub/logs/LogFiles"
-    environment:
-    - "env1=LIVE1"
-    - "env2=LIVE2"
-    - "HOSTS=IP_Host:8080"
-networks:
-  nat:
-    external: true
-```
-```
-version: "3"
-services:
-    web:
-        build: .
-        ports:
-            - "8000:80"
-        depends_on:
-            - db
-    db:
-        image: "microsoft/mssql-server-linux"
-        environment:
-            SA_PASSWORD: "Your_password123"
-            ACCEPT_EULA: "Y"
-```
+* Docker compose
+* Lier les deux conteneur
+* Créer un conteneur qui incluera le serveur et la database
+* Ajouter un framework web style flask pour monter une archi avec interface graphique dans un autre conteneur
+* Plus de sécu (ports, règles de sécu, users,firewall)
+* ajouter annuaire LDAP connecté a la BDD 
 
 
-## Sur Windows,  L’identité du processus en cours d’exécution dans le conteneur («ContainerAdministrator» sur WindowsServerCore et «ContainerUser» dans les conteneurs Nano Server, par défaut) 
+
+
+A placer :+1: 
+*identité du processus en cours d'exécution dans le conteneur «ContainerAdministrator» sur WindowsServerCore et «ContainerUser» dans les conteneurs Nano Server*
